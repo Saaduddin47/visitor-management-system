@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AnimatedSignIn } from '../components/ui/sign-in';
 
 const LoginPage = () => {
   const { login, ssoEmployee } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSsoLoading, setIsSsoLoading] = useState(false);
 
   const routeByRole = (role) => {
     if (role === 'employee') navigate('/employee');
@@ -18,40 +21,42 @@ const LoginPage = () => {
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setIsLoading(true);
     try {
       const user = await login(form);
       routeByRole(user.role);
     } catch (error) {
       setMessage(error.response?.data?.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const onSso = async () => {
     setMessage('');
+    setIsSsoLoading(true);
     try {
       const user = await ssoEmployee({ email: form.email });
       routeByRole(user.role);
     } catch (error) {
       setMessage(error.response?.data?.message || 'SSO failed');
+    } finally {
+      setIsSsoLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-canvas grid place-items-center p-4">
-      <div className="card w-full max-w-md p-6 space-y-5">
-        <div>
-          <h1 className="text-2xl font-semibold">Visitor Management System</h1>
-          <p className="text-sm text-slate-500 mt-1">Secure role-based portal</p>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input className="input" placeholder="Email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
-          <input className="input" type="password" placeholder="Password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} />
-          <button className="btn-primary w-full" type="submit">Login</button>
-        </form>
-        <button className="btn-secondary w-full" onClick={onSso}>Employee SSO (Placeholder)</button>
-        {message && <p className="text-sm text-rose-600">{message}</p>}
-      </div>
-    </div>
+    <AnimatedSignIn
+      email={form.email}
+      password={form.password}
+      onEmailChange={(value) => setForm((prev) => ({ ...prev, email: value }))}
+      onPasswordChange={(value) => setForm((prev) => ({ ...prev, password: value }))}
+      onSubmit={onSubmit}
+      onSso={onSso}
+      message={message}
+      isLoading={isLoading}
+      isSsoLoading={isSsoLoading}
+    />
   );
 };
 
