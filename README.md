@@ -15,6 +15,31 @@ Monorepo structure:
 4. Seed demo users + sample requests:
    - `npm run seed`
 
+## Docker Setup
+
+### Prerequisites
+- Docker Desktop installed and running
+- `server/.env` exists (copy from `server/.env.example` if needed)
+
+### Run with Docker Compose
+From the repository root:
+
+1. Build and start all services:
+   - `docker compose up --build`
+2. Run in detached mode (optional):
+   - `docker compose up --build -d`
+3. View logs:
+   - `docker compose logs -f`
+4. Stop containers:
+   - `docker compose down`
+5. Stop and remove MongoDB volume (full reset):
+   - `docker compose down -v`
+
+### Exposed services
+- Frontend (Vite): `http://localhost:5173`
+- Backend API: `http://localhost:5000`
+- MongoDB: `localhost:27017`
+
 ## Roles
 - Employee
 - Manager
