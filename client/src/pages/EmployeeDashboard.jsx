@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import AppLayout from '../components/AppLayout';
+import { Building2, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LayoutDashboard, LogOut } from 'lucide-react';
 import { employeeApi } from '../api';
 import { RippleButton } from '@/components/ui/multi-type-ripple-buttons';
+import { useAuth } from '../context/AuthContext';
 
 const initialForm = {
   visitorName: '',
@@ -29,11 +30,14 @@ const statusBadgeStyles = {
 };
 
 const EmployeeDashboard = () => {
+  const { logout } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [requests, setRequests] = useState([]);
   const [message, setMessage] = useState('');
   const [editingId, setEditingId] = useState('');
   const [editForm, setEditForm] = useState(initialForm);
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeNav, setActiveNav] = useState('dashboard');
 
   const loadRequests = async () => {
     const { data } = await employeeApi.getRequests();
@@ -94,32 +98,127 @@ const EmployeeDashboard = () => {
     }
   };
 
-  return (
-    <AppLayout title="Employee Dashboard">
-      <section className="card p-5">
-        <h3 className="font-semibold mb-4">New Visitor Request</h3>
-        <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={onSubmit}>
-          {['visitorName', 'visitorEmail', 'visitorPhone', 'dateOfVisit', 'timeOfVisit', 'purpose', 'officeLocation'].map((field) => (
-            <input
-              key={field}
-              className="input"
-              type={field.includes('date') ? 'date' : field.includes('time') ? 'time' : 'text'}
-              placeholder={field}
-              value={form[field]}
-              onChange={(e) => setForm((p) => ({ ...p, [field]: e.target.value }))}
-              required
-            />
-          ))}
-          <input className="input md:col-span-2" type="file" onChange={(e) => setForm((p) => ({ ...p, attachment: e.target.files?.[0] || null }))} />
-          <div className="md:col-span-2">
-            <RippleButton className="" type="submit" variant="default">Submit Request</RippleButton>
-          </div>
-        </form>
-        {message && <p className="text-sm mt-3 text-slate-600">{message}</p>}
-      </section>
+  const openSection = (sectionId, navKey) => {
+    setActiveNav(navKey);
+    const node = document.getElementById(sectionId);
+    if (node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
-      <section className="card p-5 space-y-4">
-        <h3 className="font-semibold">Request History (Auto-refresh 15s)</h3>
+  return (
+    <div className="flex h-screen">
+      <aside className={`fixed left-0 top-0 h-screen bg-[#1F4E79] text-white flex flex-col transition-all duration-300 ease-in-out ${collapsed ? 'w-16' : 'w-64'}`}>
+        <div className="px-6 py-6 border-b border-white/10">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Building2 className="text-white" size={22} />
+              {!collapsed && (
+                <div>
+                  <h1 className="text-white font-bold text-lg leading-none">VMS</h1>
+                  <p className="text-white/50 text-xs mt-0.5">Employee Panel</p>
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCollapsed((prev) => !prev)}
+              className="text-white/80 hover:text-white rounded-md p-1 hover:bg-white/10 transition-all"
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 px-3 py-4 space-y-1">
+          <button
+            type="button"
+            onClick={() => openSection('employee-dashboard', 'dashboard')}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
+              activeNav === 'dashboard' ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <LayoutDashboard size={16} />
+            {!collapsed && <span>Dashboard</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openSection('employee-new-request', 'new-request')}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
+              activeNav === 'new-request' ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <FilePlus size={16} />
+            {!collapsed && <span>New Request</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openSection('employee-history', 'history')}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
+              activeNav === 'history' ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <ClipboardList size={16} />
+            {!collapsed && <span>Request History</span>}
+          </button>
+        </div>
+
+        <div className="px-3 py-4 border-t border-white/10">
+          <button
+            onClick={logout}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} w-full px-3 py-2.5 rounded-lg text-red-300 hover:text-red-200 hover:bg-red-500/20 transition-all text-sm font-medium`}
+          >
+            <LogOut size={16} />
+            {!collapsed && <span>Logout</span>}
+          </button>
+        </div>
+      </aside>
+
+      <main className={`min-h-screen bg-gray-50 p-8 w-full overflow-y-auto transition-all duration-300 ease-in-out ${collapsed ? 'ml-16' : 'ml-64'}`} id="employee-dashboard">
+        <section id="employee-new-request" className="rounded-2xl shadow-sm border border-gray-100 bg-white p-6">
+          <h3 className="font-semibold mb-4">New Visitor Request</h3>
+          <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={onSubmit}>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Visitor Name</label>
+              <input className="input" type="text" placeholder="Visitor Name" value={form.visitorName} onChange={(e) => setForm((p) => ({ ...p, visitorName: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Visitor Email</label>
+              <input className="input" type="email" placeholder="Visitor Email" value={form.visitorEmail} onChange={(e) => setForm((p) => ({ ...p, visitorEmail: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Visitor Phone</label>
+              <input className="input" type="text" placeholder="Visitor Phone" value={form.visitorPhone} onChange={(e) => setForm((p) => ({ ...p, visitorPhone: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Purpose</label>
+              <input className="input" type="text" placeholder="Purpose of Visit" value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Office Location</label>
+              <input className="input" type="text" placeholder="Office Location" value={form.officeLocation} onChange={(e) => setForm((p) => ({ ...p, officeLocation: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Date of Visit</label>
+              <input className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" type="date" value={form.dateOfVisit} onChange={(e) => setForm((p) => ({ ...p, dateOfVisit: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-700 mb-1">Visit Time</label>
+              <input className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" type="time" value={form.timeOfVisit} onChange={(e) => setForm((p) => ({ ...p, timeOfVisit: e.target.value }))} required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-slate-700 mb-1">Attachment (optional)</label>
+              <input className="w-full border-2 border-dashed border-gray-200 rounded-lg p-4 text-sm text-gray-400" type="file" onChange={(e) => setForm((p) => ({ ...p, attachment: e.target.files?.[0] || null }))} />
+            </div>
+            <div className="md:col-span-2">
+              <RippleButton className="" type="submit" variant="default">Submit Request</RippleButton>
+            </div>
+          </form>
+          {message && <p className="text-sm mt-3 text-slate-600">{message}</p>}
+        </section>
+
+        <section id="employee-history" className="rounded-2xl shadow-sm border border-gray-100 bg-white p-6 space-y-4 mt-6">
+          <h3 className="font-semibold">Request History (Auto-refresh 15s)</h3>
         {requests.map((request) => (
           <div
             key={request._id}
@@ -160,18 +259,38 @@ const EmployeeDashboard = () => {
 
             {editingId === request._id && (
               <div className="border border-orange-200 bg-white rounded-lg p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {['visitorName', 'visitorEmail', 'visitorPhone', 'dateOfVisit', 'timeOfVisit', 'purpose', 'officeLocation'].map((field) => (
-                  <input
-                    key={field}
-                    className="input"
-                    type={field.includes('date') ? 'date' : field.includes('time') ? 'time' : 'text'}
-                    placeholder={field}
-                    value={editForm[field]}
-                    onChange={(e) => setEditForm((p) => ({ ...p, [field]: e.target.value }))}
-                    required
-                  />
-                ))}
-                <input className="input md:col-span-2" type="file" onChange={(e) => setEditForm((p) => ({ ...p, attachment: e.target.files?.[0] || null }))} />
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Visitor Name</label>
+                  <input className="input" type="text" placeholder="Visitor Name" value={editForm.visitorName} onChange={(e) => setEditForm((p) => ({ ...p, visitorName: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Visitor Email</label>
+                  <input className="input" type="email" placeholder="Visitor Email" value={editForm.visitorEmail} onChange={(e) => setEditForm((p) => ({ ...p, visitorEmail: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Visitor Phone</label>
+                  <input className="input" type="text" placeholder="Visitor Phone" value={editForm.visitorPhone} onChange={(e) => setEditForm((p) => ({ ...p, visitorPhone: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Purpose</label>
+                  <input className="input" type="text" placeholder="Purpose of Visit" value={editForm.purpose} onChange={(e) => setEditForm((p) => ({ ...p, purpose: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Office Location</label>
+                  <input className="input" type="text" placeholder="Office Location" value={editForm.officeLocation} onChange={(e) => setEditForm((p) => ({ ...p, officeLocation: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Date of Visit</label>
+                  <input className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" type="date" value={editForm.dateOfVisit} onChange={(e) => setEditForm((p) => ({ ...p, dateOfVisit: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Visit Time</label>
+                  <input className="border border-gray-200 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" type="time" value={editForm.timeOfVisit} onChange={(e) => setEditForm((p) => ({ ...p, timeOfVisit: e.target.value }))} required />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-slate-700 mb-1">Attachment (optional)</label>
+                  <input className="w-full border-2 border-dashed border-gray-200 rounded-lg p-4 text-sm text-gray-400" type="file" onChange={(e) => setEditForm((p) => ({ ...p, attachment: e.target.files?.[0] || null }))} />
+                </div>
                 <div className="md:col-span-2 flex gap-2">
                   <RippleButton className="" onClick={() => resubmit(request._id)} variant="default">Resubmit</RippleButton>
                   <RippleButton className="" onClick={() => setEditingId('')} variant="hover" hoverRippleColor="#6996e2">Cancel</RippleButton>
@@ -180,8 +299,9 @@ const EmployeeDashboard = () => {
             )}
           </div>
         ))}
-      </section>
-    </AppLayout>
+        </section>
+      </main>
+    </div>
   );
 };
 
