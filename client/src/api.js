@@ -26,7 +26,11 @@ export const managerApi = {
 };
 
 export const frontDeskApi = {
-  today: () => api.get('/frontdesk/today'),
+  today: () => api.get('/frontdesk/today', {
+    params: {
+      tzOffsetMinutes: new Date().getTimezoneOffset()
+    }
+  }),
   scan: (payload) => api.post('/frontdesk/scan', payload),
   manual: (payload) => api.post('/frontdesk/manual', payload),
   checkIn: (id, payload) => api.post(`/frontdesk/requests/${id}/check-in`, payload),

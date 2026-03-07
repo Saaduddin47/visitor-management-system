@@ -13,9 +13,58 @@ router.use(protect, authorize(ROLES.FRONT_DESK));
 
 router.get(
   '/today',
-  asyncHandler(async (_req, res) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const visitors = await VisitorRequest.find({ dateOfVisit: today }).sort({ timeOfVisit: 1 });
+  asyncHandler(async (req, res) => {
+    const rawOffset = Number(req.query.tzOffsetMinutes);
+    const tzOffsetMinutes = Number.isFinite(rawOffset) ? rawOffset : new Date().getTimezoneOffset();
+
+    const now = new Date();
+    const clientNow = new Date(now.getTime() - tzOffsetMinutes * 60 * 1000);
+    const year = clientNow.getFullYear();
+    const month = clientNow.getMonth();
+    const day = clientNow.getDate();
+
+    const targetDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const start = new Date(clientNow);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(clientNow);
+    end.setHours(23, 59, 59, 999);
+
+    const visitors = await VisitorRequest.aggregate([
+      {
+        $addFields: {
+          visitDateParsed: {
+            $convert: {
+              input: '$dateOfVisit',
+              to: 'date',
+              onError: null,
+              onNull: null
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { visitDateParsed: { $gte: start, $lte: end } },
+            { dateOfVisit: targetDateString },
+            { dateOfVisit: { $regex: `^${targetDateString}` } }
+          ]
+        }
+      },
+      { $sort: { timeOfVisit: 1 } },
+      { $project: { visitDateParsed: 0 } }
+    ]);
+
+    console.log('[frontdesk/today] query debug', {
+      tzOffsetMinutes,
+      now,
+      targetDateString,
+      start,
+      end,
+      count: visitors.length
+    });
+
     res.json({ visitors });
   })
 );

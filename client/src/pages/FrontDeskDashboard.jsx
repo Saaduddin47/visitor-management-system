@@ -30,11 +30,14 @@ const FrontDeskDashboard = () => {
 
   const load = async () => {
     const { data } = await frontDeskApi.today();
-    setVisitors(data.visitors);
+    console.log('[FrontDeskDashboard] /today response', data);
+    setVisitors(Array.isArray(data.visitors) ? data.visitors : []);
   };
 
   useEffect(() => {
     load();
+    const timer = setInterval(load, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
