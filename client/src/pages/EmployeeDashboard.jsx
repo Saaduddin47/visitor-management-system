@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Building2, ChevronLeft, ChevronRight, ClipboardList, FilePlus, LayoutDashboard, LogOut, Moon, Sun } from 'lucide-react';
 import { employeeApi } from '../api';
 import { RippleButton } from '@/components/ui/multi-type-ripple-buttons';
@@ -20,6 +20,7 @@ const statusCardStyles = {
   approved: 'border-l-[6px] border-[#16a34a] bg-[#f0fdf4] dark:bg-green-950/30',
   rejected: 'border-l-[6px] border-[#dc2626] bg-[#fef2f2] dark:bg-red-950/30',
   pending: 'border-l-[6px] border-[#ca8a04] bg-[#fefce8] dark:bg-yellow-950/30',
+  'checked-in': 'border-l-[6px] border-yellow-400 bg-yellow-50 dark:bg-yellow-950/30',
   'needs-changes': 'border-l-[6px] border-[#ea580c] bg-[#fff7ed] dark:bg-orange-950/30'
 };
 
@@ -27,6 +28,9 @@ const statusBadgeStyles = {
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-200',
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200',
   pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-200',
+  'checked-in': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-200',
+  'checked-out': 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+  'no-show': 'bg-red-900/15 text-red-900 dark:bg-red-900/40 dark:text-red-200',
   'needs-changes': 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-200'
 };
 
@@ -41,6 +45,8 @@ const EmployeeDashboard = () => {
   const [editForm, setEditForm] = useState(initialForm);
   const [collapsed, setCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState('dashboard');
+  const [activeHistoryTab, setActiveHistoryTab] = useState('live');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadRequests = async () => {
     const { data } = await employeeApi.getRequests();
@@ -53,8 +59,16 @@ const EmployeeDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const filteredRequests = useMemo(() => {
+    const liveStatuses = ['pending', 'needs-changes', 'approved', 'checked-in'];
+    const historyStatuses = ['rejected', 'checked-out', 'no-show'];
+    const allowed = activeHistoryTab === 'live' ? liveStatuses : historyStatuses;
+    return requests.filter((request) => allowed.includes(request.status));
+  }, [requests, activeHistoryTab]);
+
   const onSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const fd = new FormData();
     Object.entries(form).forEach(([key, value]) => {
       if (value) fd.append(key, value);
@@ -67,6 +81,8 @@ const EmployeeDashboard = () => {
       await loadRequests();
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to submit');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -222,7 +238,9 @@ const EmployeeDashboard = () => {
               <input className="w-full border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-lg p-4 text-sm text-gray-400 dark:text-slate-500" type="file" onChange={(e) => setForm((p) => ({ ...p, attachment: e.target.files?.[0] || null }))} />
             </div>
             <div className="md:col-span-2">
-              <RippleButton className="" type="submit" variant="default">Submit Request</RippleButton>
+              <RippleButton className="" type="submit" variant="default" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+              </RippleButton>
             </div>
           </form>
           {message && <p className="text-sm mt-3 text-slate-600 dark:text-slate-300">{message}</p>}
@@ -230,7 +248,23 @@ const EmployeeDashboard = () => {
 
         <section id="employee-history" className="rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 mt-6">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">Request History (Auto-refresh 15s)</h3>
-        {requests.map((request) => (
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-slate-700 pb-2">
+            <button
+              type="button"
+              onClick={() => setActiveHistoryTab('live')}
+              className={activeHistoryTab === 'live' ? 'border-b-2 border-blue-600 text-blue-600 font-semibold pb-2' : 'text-gray-500 hover:text-gray-700 pb-2'}
+            >
+              Live Requests
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveHistoryTab('past')}
+              className={activeHistoryTab === 'past' ? 'border-b-2 border-blue-600 text-blue-600 font-semibold pb-2' : 'text-gray-500 hover:text-gray-700 pb-2'}
+            >
+              Past Requests
+            </button>
+          </div>
+        {filteredRequests.map((request) => (
           <div
             key={request._id}
             className={`border border-slate-200 rounded-xl p-4 space-y-3 ${statusCardStyles[request.status] || 'bg-white border-l-[6px] border-slate-200'}`}

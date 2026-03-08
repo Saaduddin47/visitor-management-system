@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import QRCode from 'qrcode';
 import { AUDIT_ACTIONS, REQUEST_STATUS, ROLES } from '@vms/shared/src/index.js';
 import { protect, authorize } from '../middleware/auth.js';
@@ -10,6 +11,14 @@ import { AppError } from '../utils/AppError.js';
 import { sendMail } from '../config/mailer.js';
 
 const router = express.Router();
+
+const ensureValidRequestId = (id, res) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ message: 'Invalid request ID' });
+    return false;
+  }
+  return true;
+};
 
 router.use(protect, authorize(ROLES.MANAGER));
 
@@ -27,58 +36,72 @@ router.get(
 router.post(
   '/requests/:id/approve',
   asyncHandler(async (req, res) => {
-    const request = await VisitorRequest.findOne({ _id: req.params.id, manager: req.user._id });
-    if (!request) throw new AppError('Request not found', 404);
+    if (!ensureValidRequestId(req.params.id, res)) return;
 
-    request.status = REQUEST_STATUS.APPROVED;
-    request.managerComment = requiredString(req.body.comment || 'Approved', 'Comment', 2000);
-    request.actions.push({ action: REQUEST_STATUS.APPROVED, user: req.user._id, remark: request.managerComment });
+    try {
+      const request = await VisitorRequest.findOne({ _id: req.params.id, manager: req.user._id });
+      console.log('[manager/approve] request lookup', { id: req.params.id, found: Boolean(request) });
+      if (!request) throw new AppError('Request not found', 404);
 
-    request.qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify({
-      visitId: request.visitId,
-      referenceId: request.referenceId
-    }));
-    request.qrSentAt = new Date();
+      request.status = REQUEST_STATUS.APPROVED;
+      request.managerComment = requiredString(req.body.comment || 'Approved', 'Comment', 2000);
+      request.actions.push({ action: REQUEST_STATUS.APPROVED, user: req.user._id, remark: request.managerComment });
 
-    await request.save();
+      request.qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify({
+        visitId: request.visitId,
+        referenceId: request.referenceId
+      }));
+      request.qrSentAt = new Date();
 
-    await sendMail({
-      to: request.visitorEmail,
-      subject: `Visit Approved (${request.referenceId})`,
-      html: `<div style="font-family: Inter, Arial, sans-serif; color: #0f172a;">
-        <h2>Your visit is approved</h2>
-        <p><strong>Reference:</strong> ${request.referenceId}</p>
-        <p><strong>Date:</strong> ${request.dateOfVisit} at ${request.timeOfVisit}</p>
-        <p>Please show this QR code at front desk:</p>
-        <img src="${request.qrCodeDataUrl}" alt="Visitor QR" style="width:220px;height:220px"/>
-      </div>`
-    });
+      await request.save();
 
-    await writeAuditLog({
-      action: AUDIT_ACTIONS.REQUEST_APPROVED,
-      user: req.user._id,
-      role: req.user.role,
-      resourceType: 'VisitorRequest',
-      resourceId: request._id.toString(),
-      meta: { referenceId: request.referenceId }
-    });
+      try {
+        await sendMail({
+          to: request.visitorEmail,
+          subject: `Visit Approved (${request.referenceId})`,
+          html: `<div style="font-family: Inter, Arial, sans-serif; color: #0f172a;">
+            <h2>Your visit is approved</h2>
+            <p><strong>Reference:</strong> ${request.referenceId}</p>
+            <p><strong>Date:</strong> ${request.dateOfVisit} at ${request.timeOfVisit}</p>
+            <p>Please show this QR code at front desk:</p>
+            <img src="${request.qrCodeDataUrl}" alt="Visitor QR" style="width:220px;height:220px"/>
+          </div>`
+        });
 
-    await writeAuditLog({
-      action: AUDIT_ACTIONS.QR_SENT,
-      user: req.user._id,
-      role: req.user.role,
-      resourceType: 'VisitorRequest',
-      resourceId: request._id.toString(),
-      meta: { visitorEmail: request.visitorEmail }
-    });
+        await writeAuditLog({
+          action: AUDIT_ACTIONS.QR_SENT,
+          user: req.user._id,
+          role: req.user.role,
+          resourceType: 'VisitorRequest',
+          resourceId: request._id.toString(),
+          meta: { visitorEmail: request.visitorEmail }
+        });
+      } catch (emailErr) {
+        console.error('Email sending failed:', emailErr.message);
+      }
 
-    res.json({ request });
+      await writeAuditLog({
+        action: AUDIT_ACTIONS.REQUEST_APPROVED,
+        user: req.user._id,
+        role: req.user.role,
+        resourceType: 'VisitorRequest',
+        resourceId: request._id.toString(),
+        meta: { referenceId: request.referenceId }
+      });
+
+      res.json({ request });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
   })
 );
 
 router.post(
   '/requests/:id/reject',
   asyncHandler(async (req, res) => {
+    if (!ensureValidRequestId(req.params.id, res)) return;
+
     const request = await VisitorRequest.findOne({ _id: req.params.id, manager: req.user._id });
     if (!request) throw new AppError('Request not found', 404);
 
@@ -104,6 +127,8 @@ router.post(
 router.post(
   '/requests/:id/comment',
   asyncHandler(async (req, res) => {
+    if (!ensureValidRequestId(req.params.id, res)) return;
+
     const request = await VisitorRequest.findOne({ _id: req.params.id, manager: req.user._id });
     if (!request) throw new AppError('Request not found', 404);
 
