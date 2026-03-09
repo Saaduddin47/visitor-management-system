@@ -20,9 +20,21 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 
+const allowedOrigins = [
+  env.clientUrl,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`));
+      }
+    },
     credentials: true
   })
 );
