@@ -20,20 +20,25 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 const app = express();
 
+const normalizeOrigin = (url) => (url || '').replace(/\/+$/, '');
+
 const allowedOrigins = [
   env.clientUrl,
   "https://visitor-management-system-client.vercel.app",
   'http://localhost:5173',
   'http://localhost:3000',
-];
+].map(normalizeOrigin);
+
+const vercelPreviewOrigin = /\.vercel\.app$/;
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (!origin || allowedOrigins.includes(normalizedOrigin) || vercelPreviewOrigin.test(normalizedOrigin)) {
         callback(null, true);
       } else {
-        callback(new Error(`CORS blocked: ${origin}`));
+        callback(new Error(`CORS blocked: ${normalizedOrigin}`));
       }
     },
     credentials: true

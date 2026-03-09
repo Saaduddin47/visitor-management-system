@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const normalizeBaseUrl = (value) => (value || '').trim().replace(/\/+$/, '');
+
+const rawApiUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+const apiBaseUrl = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: apiBaseUrl,
   withCredentials: true
 });
 
@@ -46,5 +51,5 @@ export const adminApi = {
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (payload) => api.put('/admin/settings', payload),
   getLogs: (params) => api.get('/admin/logs', { params }),
-  exportLogsUrl: 'http://localhost:5000/api/admin/logs/export.csv'
+  exportLogsUrl: `${apiBaseUrl}/admin/logs/export.csv`
 };

@@ -5,16 +5,22 @@ import { User } from '../models/User.js';
 export const signToken = (payload) => jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 
 export const setAuthCookie = (res, token) => {
+  const isProduction = env.nodeEnv === 'production';
   res.cookie('token', token, {
     httpOnly: true,
-    secure: env.nodeEnv === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000
   });
 };
 
 export const clearAuthCookie = (res) => {
-  res.clearCookie('token');
+  const isProduction = env.nodeEnv === 'production';
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax'
+  });
 };
 
 export const protect = async (req, res, next) => {
