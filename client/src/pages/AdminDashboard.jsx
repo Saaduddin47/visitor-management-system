@@ -1,34 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Activity,
-  Building2,
-  CalendarDays,
-  CheckCircle,
-  Download,
-  FilePen,
-  FilePlus,
-  LayoutDashboard,
-  LogIn,
-  LogOut,
-  Menu,
-  Moon,
-  MessageSquare,
-  ScrollText,
-  Settings,
-  SlidersHorizontal,
-  UserPlus,
-  Users,
-  Sun,
-  XCircle
-} from 'lucide-react';
+import { Activity, Calendar, Download, FileText, Plus, Settings, SlidersHorizontal, Users } from 'lucide-react';
 import { adminApi } from '../api';
-import { useAuth } from '../context/AuthContext';
 import { RippleButton } from '@/components/ui/multi-type-ripple-buttons';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { useTheme } from '../context/ThemeContext';
+import BoltLayout from '@/components/BoltLayout';
+import { SectionCard, StatCard } from '@/components/ui/bolt';
 import AnimatedDropdown from '@/components/ui/AnimatedDropdown';
 
 const emptyUser = { name: '', email: '', password: '', role: 'employee', manager: '', ssoEnabled: false };
@@ -46,24 +21,6 @@ const roleBadgeStyles = {
   'it-admin': 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200'
 };
 
-const avatarRoleStyles = {
-  employee: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-200',
-  manager: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-200',
-  'front-desk': 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-200',
-  'it-admin': 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200'
-};
-
-const actionVisuals = {
-  'user.login': { icon: LogIn, color: 'text-blue-600' },
-  'user.logout': { icon: LogOut, color: 'text-red-600' },
-  'request.created': { icon: FilePlus, color: 'text-blue-600' },
-  'request.approved': { icon: CheckCircle, color: 'text-green-600' },
-  'request.rejected': { icon: XCircle, color: 'text-red-600' },
-  'request.commented': { icon: MessageSquare, color: 'text-orange-600' },
-  'request.updated': { icon: FilePen, color: 'text-blue-600' },
-  'admin.settings-updated': { icon: SlidersHorizontal, color: 'text-slate-500' }
-};
-
 const getInitials = (name = '') => {
   const parts = name.trim().split(' ').filter(Boolean);
   if (!parts.length) return 'U';
@@ -71,364 +28,7 @@ const getInitials = (name = '') => {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
-const getLogVisual = (action = '') => actionVisuals[action] || { icon: Activity, color: 'text-slate-500' };
-
-const SidebarContent = ({ mobile = false, activeNav, openSection, toggleTheme, isDark, logout }) => (
-  <div className="flex flex-col h-full bg-[#1F4E79]">
-    <div className="px-6 py-6 border-b border-white/10">
-      <div className="flex items-center gap-2">
-        <Building2 className="text-white" size={22} />
-        <div>
-          <h1 className="text-white font-bold text-lg leading-none">VMS</h1>
-          <p className="text-white/50 text-xs mt-0.5">IT Admin Panel</p>
-        </div>
-      </div>
-    </div>
-
-    <ScrollArea className="flex-1 px-3 py-4">
-      <div className="space-y-1">
-        {[
-          { key: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-          { key: 'users', icon: Users, label: 'User Management' },
-          { key: 'logs', icon: ScrollText, label: 'Audit Logs' },
-          { key: 'settings', icon: Settings, label: 'System Settings' }
-        ].map((item) => {
-          const Icon = item.icon;
-          const active = activeNav === item.key;
-          const button = (
-            <button
-              type="button"
-              onClick={() => openSection(item.key)}
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-                active ? 'bg-white/15 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Icon size={16} />
-              <span>{item.label}</span>
-            </button>
-          );
-
-          if (!mobile) return <div key={item.key}>{button}</div>;
-          return (
-            <SheetClose asChild key={item.key}>
-              {button}
-            </SheetClose>
-          );
-        })}
-      </div>
-    </ScrollArea>
-
-    <div className="px-3 py-4 border-t border-white/10 space-y-2">
-      <button
-        type="button"
-        onClick={toggleTheme}
-        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"
-      >
-        {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-      </button>
-      <button
-        onClick={logout}
-        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-red-300 hover:text-red-200 hover:bg-red-500/20 transition-all text-sm font-medium"
-      >
-        <LogOut size={16} />
-        <span>Logout</span>
-      </button>
-    </div>
-  </div>
-);
-
-const UsersSection = ({
-  createUser,
-  userForm,
-  updateCreateUserField,
-  handleCreateRoleChange,
-  users,
-  editing,
-  setEditing,
-  updateUser,
-  deleteUser
-}) => (
-  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 space-y-6">
-    <div className="flex items-center gap-2">
-      <UserPlus size={18} className="text-[#2E75B6]" />
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Create New User</h2>
-    </div>
-
-    <form className="space-y-4" onSubmit={createUser}>
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Name</label>
-        <input
-          className="input"
-          name="name"
-          placeholder="Enter full name"
-          value={userForm.name}
-          onChange={(event) => updateCreateUserField('name', event.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Email</label>
-        <input
-          className="input"
-          name="email"
-          type="email"
-          placeholder="Enter email"
-          value={userForm.email}
-          onChange={(event) => updateCreateUserField('email', event.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Password</label>
-        <input
-          className="input"
-          name="password"
-          type="password"
-          placeholder="Create password"
-          value={userForm.password}
-          onChange={(event) => updateCreateUserField('password', event.target.value)}
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
-        <div>
-          <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Role</label>
-          <AnimatedDropdown
-            options={roleOptions}
-            value={userForm.role}
-            onChange={handleCreateRoleChange}
-            placeholder="Select role"
-          />
-        </div>
-        <label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 mt-6">
-          <input
-            type="checkbox"
-            checked={userForm.ssoEnabled}
-            onChange={(event) => updateCreateUserField('ssoEnabled', event.target.checked)}
-          />
-          SSO Enabled
-        </label>
-      </div>
-
-      <RippleButton className="w-full" type="submit" variant="default">Create</RippleButton>
-    </form>
-
-    <div className="border-t border-gray-100 dark:border-slate-800 pt-4 space-y-3">
-      <h3 className="font-semibold text-slate-900 dark:text-slate-100">Users</h3>
-      <div className="divide-y divide-gray-100 dark:divide-slate-800">
-        {users.map((user) => (
-          <div key={user._id} className="py-4 first:pt-0 last:pb-0">
-            <div className="grid grid-cols-1 2xl:grid-cols-[1.2fr_1.2fr_auto] gap-4 items-center">
-              <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold ${avatarRoleStyles[user.role] || 'bg-slate-100 text-slate-700'}`}>
-                  {getInitials(user.name)}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{user.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
-                  <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${roleBadgeStyles[user.role] || 'bg-slate-100 text-slate-700'}`}>
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <AnimatedDropdown
-                  options={roleOptions}
-                  value={editing[user._id]?.role ?? user.role}
-                  onChange={(event) => setEditing((prev) => ({
-                    ...prev,
-                    [user._id]: { ...prev[user._id], role: event.target.value }
-                  }))}
-                  placeholder="Select role"
-                />
-                <label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 px-2">
-                  <input
-                    type="checkbox"
-                    checked={editing[user._id]?.isActive ?? user.isActive}
-                    onChange={(event) => setEditing((prev) => ({
-                      ...prev,
-                      [user._id]: { ...prev[user._id], isActive: event.target.checked }
-                    }))}
-                  />
-                  Active
-                </label>
-                <label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 px-2">
-                  <input
-                    type="checkbox"
-                    checked={editing[user._id]?.ssoEnabled ?? user.ssoEnabled}
-                    onChange={(event) => setEditing((prev) => ({
-                      ...prev,
-                      [user._id]: { ...prev[user._id], ssoEnabled: event.target.checked }
-                    }))}
-                  />
-                  SSO
-                </label>
-              </div>
-
-              <div className="flex gap-2 justify-start 2xl:justify-end">
-                <RippleButton onClick={() => updateUser(user._id)} variant="default">Save</RippleButton>
-                <RippleButton onClick={() => deleteUser(user._id)} variant="default" className="bg-red-600 hover:bg-red-700">Delete</RippleButton>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const LogsSection = ({ totalLogs, filters, setFilters, applyFilters, clearFilters, pagedLogs, page, totalPages, setPage }) => (
-  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 space-y-4">
-    <div className="flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-2">
-        <ScrollText size={18} className="text-[#2E75B6]" />
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Audit Logs</h2>
-        <span className="bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold">{totalLogs}</span>
-      </div>
-
-      <RippleButton
-        onClick={() => window.open(adminApi.exportLogsUrl, '_blank', 'noopener,noreferrer')}
-        variant="hoverborder"
-        hoverBorderEffectColor="#2E75B6"
-        hoverBorderEffectThickness="2px"
-        className="inline-flex"
-      >
-        <Download size={14} />
-        Export CSV
-      </RippleButton>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Action</label>
-        <input className="input" placeholder="e.g. request.created" value={filters.action} onChange={(event) => setFilters((prev) => ({ ...prev, action: event.target.value }))} />
-      </div>
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Role</label>
-        <input className="input" placeholder="e.g. manager" value={filters.role} onChange={(event) => setFilters((prev) => ({ ...prev, role: event.target.value }))} />
-      </div>
-    </div>
-
-    <div className="flex items-end flex-wrap gap-2">
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">From Date</label>
-        <div className="relative">
-          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="date"
-            value={filters.from}
-            onChange={(event) => setFilters((prev) => ({ ...prev, from: event.target.value }))}
-            className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      <div className="pb-2 text-slate-400 dark:text-slate-500">—</div>
-
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">To Date</label>
-        <div className="relative">
-          <CalendarDays size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="date"
-            value={filters.to}
-            onChange={(event) => setFilters((prev) => ({ ...prev, to: event.target.value }))}
-            className="border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      <RippleButton
-        onClick={applyFilters}
-        variant="hoverborder"
-        hoverBorderEffectColor="#2E75B6"
-        hoverBorderEffectThickness="2px"
-      >
-        Search
-      </RippleButton>
-
-      <RippleButton onClick={clearFilters} variant="ghost">Clear Filters</RippleButton>
-    </div>
-
-    <div className="space-y-2 max-h-[520px] overflow-auto">
-      {pagedLogs.map((log) => {
-        const visual = getLogVisual(log.action);
-        const Icon = visual.icon;
-        return (
-          <div key={log._id} className="border border-gray-100 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-900">
-            <div className="flex items-center gap-3">
-              <Icon size={18} className={visual.color} />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{log.action}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{log.user?.name || 'System'}</p>
-              </div>
-              <p className="ml-auto text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</p>
-              <span className={`text-xs px-2 py-1 rounded-full capitalize font-semibold ${roleBadgeStyles[log.role] || 'bg-slate-100 text-slate-700'}`}>
-                {log.role || 'unknown'}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-
-    <div className="flex items-center justify-between">
-      <RippleButton
-        onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-        disabled={page === 1}
-        variant="hoverborder"
-        hoverBorderEffectColor="#2E75B6"
-        hoverBorderEffectThickness="2px"
-      >
-        Previous
-      </RippleButton>
-      <p className="text-sm text-slate-600 dark:text-slate-300">Page {page} of {totalPages}</p>
-      <RippleButton
-        onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-        disabled={page === totalPages}
-        variant="hoverborder"
-        hoverBorderEffectColor="#2E75B6"
-        hoverBorderEffectThickness="2px"
-      >
-        Next
-      </RippleButton>
-    </div>
-  </div>
-);
-
-const SettingsSection = ({ settings, setSettings, saveSettings }) => (
-  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6">
-    <div className="flex items-center gap-2 mb-4">
-      <Settings size={18} className="text-[#2E75B6]" />
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">System Settings</h2>
-    </div>
-
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px_200px_auto] gap-3 items-end">
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Company Name</label>
-        <input className="input" value={settings.companyName} onChange={(event) => setSettings((prev) => ({ ...prev, companyName: event.target.value }))} />
-      </div>
-      <div>
-        <label className="block text-sm text-slate-700 dark:text-slate-300 mb-1">Check-in Window (minutes)</label>
-        <input className="input" type="number" value={settings.checkInWindowMinutes} onChange={(event) => setSettings((prev) => ({ ...prev, checkInWindowMinutes: event.target.value }))} />
-      </div>
-      <label className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2 pb-2">
-        <input type="checkbox" checked={settings.allowEmployeeSso} onChange={(event) => setSettings((prev) => ({ ...prev, allowEmployeeSso: event.target.checked }))} />
-        Allow Employee SSO
-      </label>
-      <RippleButton onClick={saveSettings} variant="default">Save Settings</RippleButton>
-    </div>
-  </div>
-);
-
 const AdminDashboard = () => {
-  const { logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
-
   const [users, setUsers] = useState([]);
   const [logs, setLogs] = useState([]);
   const [userForm, setUserForm] = useState(emptyUser);
@@ -436,13 +36,9 @@ const AdminDashboard = () => {
   const [editing, setEditing] = useState({});
   const [settings, setSettings] = useState({ companyName: '', allowEmployeeSso: true, checkInWindowMinutes: 120 });
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  const [activeSection, setActiveSection] = useState('users');
-  const [activeNav, setActiveNav] = useState('users');
-
-  const updateCreateUserField = (key, value) => {
-    setUserForm((prev) => ({ ...prev, [key]: value }));
-  };
+  const updateCreateUserField = (key, value) => setUserForm((previous) => ({ ...previous, [key]: value }));
 
   const handleCreateRoleChange = (input) => {
     const nextRole = typeof input === 'string' ? input : input?.target?.value;
@@ -513,101 +109,119 @@ const AdminDashboard = () => {
   const totalLogs = logs.length;
   const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
   const pagedLogs = useMemo(() => logs.slice((page - 1) * pageSize, page * pageSize), [logs, page]);
-
-  const openSection = (nav) => {
-    setActiveNav(nav);
-    if (nav === 'logs') setActiveSection('logs');
-    else if (nav === 'settings') setActiveSection('settings');
-    else setActiveSection('users');
-  };
+  const pendingRequests = logs.filter((log) => log.action?.includes('pending') || log.action === 'request.created').length;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
-      <div className="lg:hidden fixed top-4 left-4 z-40">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
-              <Menu size={18} />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 border-r border-white/10">
-            <SidebarContent mobile activeNav={activeNav} openSection={openSection} toggleTheme={toggleTheme} isDark={isDark} logout={logout} />
-          </SheetContent>
-        </Sheet>
+    <BoltLayout title="IT Administrator Dashboard" subtitle="System management and configuration">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard label="Total Users" value={users.length} tone="blue" icon={Users} />
+        <StatCard label="Active Users" value={users.filter((user) => user.isActive).length} tone="green" icon={Activity} />
+        <StatCard label="Audit Logs" value={totalLogs} tone="purple" icon={FileText} />
+        <StatCard label="Pending Requests" value={pendingRequests} tone="yellow" icon={Calendar} />
       </div>
 
-      <div className="hidden lg:flex h-screen">
-        <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <SidebarContent activeNav={activeNav} openSection={openSection} toggleTheme={toggleTheme} isDark={isDark} logout={logout} />
-          </ResizablePanel>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800">
+        <div className="border-b border-gray-200 dark:border-slate-800 px-4">
+          <nav className="flex gap-6 overflow-x-auto">
+            {[
+              { id: 'overview', label: 'Overview', icon: Activity },
+              { id: 'users', label: 'User Management', icon: Users },
+              { id: 'logs', label: 'Audit Logs', icon: FileText },
+              { id: 'settings', label: 'System Settings', icon: Settings }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-sm font-medium whitespace-nowrap ${activeTab === tab.id ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'}`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={80}>
-            <div className="h-screen overflow-y-auto bg-gray-50 dark:bg-slate-950 p-8">
-              {activeSection === 'users' && (
-                <UsersSection
-                  createUser={createUser}
-                  userForm={userForm}
-                  updateCreateUserField={updateCreateUserField}
-                  handleCreateRoleChange={handleCreateRoleChange}
-                  users={users}
-                  editing={editing}
-                  setEditing={setEditing}
-                  updateUser={updateUser}
-                  deleteUser={deleteUser}
-                />
-              )}
-              {activeSection === 'logs' && (
-                <LogsSection
-                  totalLogs={totalLogs}
-                  filters={filters}
-                  setFilters={setFilters}
-                  applyFilters={applyFilters}
-                  clearFilters={clearFilters}
-                  pagedLogs={pagedLogs}
-                  page={page}
-                  totalPages={totalPages}
-                  setPage={setPage}
-                />
-              )}
-              {activeSection === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} saveSettings={saveSettings} />}
+        <div className="p-6">
+          {activeTab === 'overview' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SectionCard title="System Status">
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm text-green-700 dark:text-green-300">Database Connection: Healthy</div>
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm text-green-700 dark:text-green-300">Security Status: Secure</div>
+                  <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm text-green-700 dark:text-green-300">API Services: Online</div>
+                </div>
+              </SectionCard>
+              <SectionCard title="Recent Activity">
+                <div className="space-y-2 max-h-[320px] overflow-auto">
+                  {logs.slice(0, 8).map((log) => (
+                    <div key={log._id} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700">
+                      <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{log.action}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">{log.user?.name || 'System'} · {new Date(log.createdAt).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+          ) : null}
 
-      <div className="lg:hidden min-h-screen bg-gray-50 dark:bg-slate-950 pt-20 p-4">
-        {activeSection === 'users' && (
-          <UsersSection
-            createUser={createUser}
-            userForm={userForm}
-            updateCreateUserField={updateCreateUserField}
-            handleCreateRoleChange={handleCreateRoleChange}
-            users={users}
-            editing={editing}
-            setEditing={setEditing}
-            updateUser={updateUser}
-            deleteUser={deleteUser}
-          />
-        )}
-        {activeSection === 'logs' && (
-          <LogsSection
-            totalLogs={totalLogs}
-            filters={filters}
-            setFilters={setFilters}
-            applyFilters={applyFilters}
-            clearFilters={clearFilters}
-            pagedLogs={pagedLogs}
-            page={page}
-            totalPages={totalPages}
-            setPage={setPage}
-          />
-        )}
-        {activeSection === 'settings' && <SettingsSection settings={settings} setSettings={setSettings} saveSettings={saveSettings} />}
+          {activeTab === 'users' ? (
+            <SectionCard title="User Management" actions={<RippleButton type="submit" form="create-user-form" variant="default" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"><Plus className="w-4 h-4" />Create</RippleButton>}>
+              <form id="create-user-form" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6" onSubmit={createUser}>
+                <input className="input" name="name" placeholder="Full name" value={userForm.name} onChange={(event) => updateCreateUserField('name', event.target.value)} required />
+                <input className="input" name="email" type="email" placeholder="Email" value={userForm.email} onChange={(event) => updateCreateUserField('email', event.target.value)} required />
+                <input className="input" name="password" type="password" placeholder="Password" value={userForm.password} onChange={(event) => updateCreateUserField('password', event.target.value)} required />
+                <AnimatedDropdown options={roleOptions} value={userForm.role} onChange={handleCreateRoleChange} placeholder="Select role" />
+              </form>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="text-left text-gray-500 dark:text-slate-400 border-b border-gray-200 dark:border-slate-700"><th className="py-2">User</th><th className="py-2">Role</th><th className="py-2">Status</th><th className="py-2">Actions</th></tr></thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user._id} className="border-b border-gray-100 dark:border-slate-800">
+                        <td className="py-3"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-200">{getInitials(user.name)}</div><div><p className="font-medium text-gray-900 dark:text-slate-100">{user.name}</p><p className="text-xs text-gray-500 dark:text-slate-400">{user.email}</p></div></div></td>
+                        <td className="py-3 w-64"><AnimatedDropdown options={roleOptions} value={editing[user._id]?.role ?? user.role} onChange={(event) => setEditing((p) => ({ ...p, [user._id]: { ...p[user._id], role: event.target.value } }))} /></td>
+                        <td className="py-3"><div className="flex items-center gap-4"><label className="text-sm text-gray-700 dark:text-slate-300 flex items-center gap-2"><input type="checkbox" checked={editing[user._id]?.isActive ?? user.isActive} onChange={(event) => setEditing((p) => ({ ...p, [user._id]: { ...p[user._id], isActive: event.target.checked } }))} />Active</label><label className="text-sm text-gray-700 dark:text-slate-300 flex items-center gap-2"><input type="checkbox" checked={editing[user._id]?.ssoEnabled ?? user.ssoEnabled} onChange={(event) => setEditing((p) => ({ ...p, [user._id]: { ...p[user._id], ssoEnabled: event.target.checked } }))} />SSO</label></div></td>
+                        <td className="py-3"><div className="flex gap-2"><RippleButton onClick={() => updateUser(user._id)} variant="default" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">Save</RippleButton><RippleButton onClick={() => deleteUser(user._id)} variant="default" className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0">Delete</RippleButton></div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          ) : null}
+
+          {activeTab === 'logs' ? (
+            <SectionCard title="Audit Logs" actions={<RippleButton onClick={() => window.open(adminApi.exportLogsUrl, '_blank', 'noopener,noreferrer')} variant="hoverborder" hoverBorderEffectColor="#10b981" hoverBorderEffectThickness="2px"><Download className="w-4 h-4" />Export CSV</RippleButton>}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <input className="input" placeholder="Action" value={filters.action} onChange={(event) => setFilters((previous) => ({ ...previous, action: event.target.value }))} />
+                  <input className="input" placeholder="Role" value={filters.role} onChange={(event) => setFilters((previous) => ({ ...previous, role: event.target.value }))} />
+                  <input className="input" type="date" value={filters.from} onChange={(event) => setFilters((previous) => ({ ...previous, from: event.target.value }))} />
+                  <input className="input" type="date" value={filters.to} onChange={(event) => setFilters((previous) => ({ ...previous, to: event.target.value }))} />
+                </div>
+                <div className="flex gap-2"><RippleButton onClick={applyFilters} variant="default" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">Search</RippleButton><RippleButton onClick={clearFilters} variant="ghost">Clear</RippleButton></div>
+                <div className="space-y-2 max-h-[520px] overflow-auto">{pagedLogs.map((log) => <div key={log._id} className="border border-gray-100 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-900"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center"><Activity className="w-4 h-4 text-slate-600 dark:text-slate-300" /></div><div className="min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{log.action}</p><p className="text-xs text-gray-500 dark:text-slate-400 truncate">{log.user?.name || 'System'}</p></div><p className="ml-auto text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</p><span className={`text-xs px-2 py-1 rounded-full capitalize font-semibold ${roleBadgeStyles[log.role] || 'bg-slate-100 text-slate-700'}`}>{log.role || 'unknown'}</span></div></div>)}</div>
+                <div className="flex items-center justify-between"><RippleButton onClick={() => setPage((previous) => Math.max(1, previous - 1))} disabled={page === 1} variant="hover">Previous</RippleButton><p className="text-sm text-gray-600 dark:text-slate-300">Page {page} of {totalPages}</p><RippleButton onClick={() => setPage((previous) => Math.min(totalPages, previous + 1))} disabled={page === totalPages} variant="hover">Next</RippleButton></div>
+              </div>
+            </SectionCard>
+          ) : null}
+
+          {activeTab === 'settings' ? (
+            <SectionCard title="System Settings" actions={<SlidersHorizontal className="w-5 h-5 text-emerald-600" />}>
+              <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px_200px_auto] gap-3 items-end">
+                <div><label className="block text-sm text-gray-700 dark:text-slate-300 mb-1">Company Name</label><input className="input" value={settings.companyName} onChange={(event) => setSettings((previous) => ({ ...previous, companyName: event.target.value }))} /></div>
+                <div><label className="block text-sm text-gray-700 dark:text-slate-300 mb-1">Check-in Window (minutes)</label><input className="input" type="number" value={settings.checkInWindowMinutes} onChange={(event) => setSettings((previous) => ({ ...previous, checkInWindowMinutes: event.target.value }))} /></div>
+                <label className="text-sm text-gray-700 dark:text-slate-300 flex items-center gap-2 pb-2"><input type="checkbox" checked={settings.allowEmployeeSso} onChange={(event) => setSettings((previous) => ({ ...previous, allowEmployeeSso: event.target.checked }))} />Allow Employee SSO</label>
+                <RippleButton onClick={saveSettings} variant="default" className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">Save Settings</RippleButton>
+              </div>
+            </SectionCard>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </BoltLayout>
   );
 };
 

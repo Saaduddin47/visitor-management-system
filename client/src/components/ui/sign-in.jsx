@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Eye, EyeOff, LogIn, ShieldCheck } from 'lucide-react';
-import { Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, Lock, Shield, ShieldCheck } from 'lucide-react';
 import { RippleButton } from '@/components/ui/multi-type-ripple-buttons';
-import { useTheme } from '@/context/ThemeContext';
 
 const AnimatedSignIn = ({
   email,
@@ -15,183 +13,91 @@ const AnimatedSignIn = ({
   isLoading,
   isSsoLoading
 }) => {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
   const [showPassword, setShowPassword] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [formVisible, setFormVisible] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const timer = setTimeout(() => setFormVisible(true), 250);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!mounted) return null;
 
   return (
-    <div
-      className={`min-h-screen w-full transition-colors duration-300 ${
-        isDark ? 'bg-slate-950' : 'bg-[#e8f4ef]'
-      }`}
-    >
-      <div className="flex min-h-screen items-center justify-center p-4 md:p-6">
-        <div
-          className={`relative w-full max-w-6xl overflow-hidden rounded-2xl transition-all duration-500 ${
-            isDark ? 'bg-slate-900 shadow-xl shadow-slate-900/40' : 'bg-white shadow-xl shadow-gray-200'
-          } ${formVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
-        >
-          <RippleButton
-            onClick={toggleTheme}
-            className={`absolute right-4 top-4 z-10 rounded-full p-2 transition-colors ${
-              isDark ? 'bg-slate-700 text-yellow-400 hover:bg-slate-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-            aria-label="Toggle theme"
-            variant="ghost"
-          >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </RippleButton>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center px-4">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="flex justify-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+          </div>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-slate-100">Visitor Management System</h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">Sign in to your account to continue</p>
+        </div>
 
-          <div className="flex flex-col md:flex-row">
-            <div className="hidden w-full md:block md:w-3/5 bg-gray-100 p-6">
-              <div className="grid h-full grid-cols-2 grid-rows-3 gap-4 overflow-hidden">
-                <div className="overflow-hidden rounded-xl">
-                  <img src="https://images.unsplash.com/photo-1497366216548-37526070297c" alt="Reception desk" className="h-full w-full object-cover" />
-                </div>
-                <div
-                  className={`rounded-xl flex flex-col justify-center items-center p-6 text-white ${
-                    isDark ? 'bg-orange-600' : 'bg-orange-500'
-                  }`}
-                >
-                  <h2 className="text-5xl font-bold mb-2">24/7</h2>
-                  <p className="text-center text-sm">Secure visitor entry tracking and approvals in one portal.</p>
-                </div>
-                <div className="overflow-hidden rounded-xl">
-                  <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984" alt="Office meeting" className="h-full w-full object-cover" />
-                </div>
-                <div className="overflow-hidden rounded-xl">
-                  <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d" alt="Security team" className="h-full w-full object-cover" />
-                </div>
-                <div
-                  className={`rounded-xl flex flex-col justify-center items-center p-6 text-white ${
-                    isDark ? 'bg-green-600' : 'bg-green-500'
-                  }`}
-                >
-                  <h2 className="text-5xl font-bold mb-2">Role</h2>
-                  <p className="text-center text-sm">Employee, manager, front desk, and IT admin access control.</p>
-                </div>
-                <div className="overflow-hidden rounded-xl">
-                  <img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6" alt="System dashboard" className="h-full w-full object-cover" />
-                </div>
-              </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 space-y-6 border border-gray-200 dark:border-slate-800">
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email address</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => onEmailChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                placeholder="Enter your email"
+                required
+              />
             </div>
 
-            <div
-              className={`w-full md:w-2/5 p-8 md:p-12 ${
-                isDark ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'
-              }`}
-              style={{
-                transform: formVisible ? 'translateX(0)' : 'translateX(20px)',
-                opacity: formVisible ? 1 : 0,
-                transition: 'transform 0.6s ease-out, opacity 0.6s ease-out'
-              }}
-            >
-              <div className="mb-8">
-                <h1 className={`text-2xl font-bold mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Sign in to <span className="text-blue-500">VMS</span>
-                </h1>
-                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  Access visitor requests, approvals, and front desk operations securely.
-                </p>
-              </div>
-
-              <form onSubmit={onSubmit} className="space-y-5">
-                <div className="space-y-1">
-                  <label htmlFor="email" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-                    Work Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    value={email}
-                    onChange={(e) => onEmailChange(e.target.value)}
-                    className={`block w-full rounded-md border py-3 px-4 focus:outline-none focus:ring-2 sm:text-sm ${
-                      isDark
-                        ? 'bg-slate-800 border-slate-700 text-white placeholder:text-gray-400 focus:ring-blue-500'
-                        : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-blue-500'
-                    }`}
-                    placeholder="name@company.com"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label htmlFor="password" className={`block text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      id="password"
-                      value={password}
-                      onChange={(e) => onPasswordChange(e.target.value)}
-                      className={`block w-full rounded-md border py-3 px-4 pr-10 focus:outline-none focus:ring-2 sm:text-sm ${
-                        isDark
-                          ? 'bg-slate-800 border-slate-700 text-white placeholder:text-gray-400 focus:ring-blue-500'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-blue-500'
-                      }`}
-                      placeholder="••••••••"
-                      required
-                    />
-                    <RippleButton
-                      type="button"
-                      className={`absolute inset-y-0 right-0 flex items-center pr-3 ${
-                        isDark ? 'text-gray-300' : 'text-gray-500'
-                      }`}
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label="Toggle password visibility"
-                      variant="ghost"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </RippleButton>
-                  </div>
-                </div>
-
-                <RippleButton
-                  type="submit"
-                  disabled={isLoading}
-                  className={`flex w-full items-center justify-center gap-2 rounded-md py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-300 ${
-                    isDark ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-600 hover:bg-blue-700'
-                  } ${isLoading ? 'cursor-not-allowed opacity-70' : ''}`}
-                  variant="default"
-                >
-                  {isLoading ? 'Signing in...' : <><LogIn size={16} /> Login</>}
-                </RippleButton>
-
-                <RippleButton
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Password</label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => onPasswordChange(e.target.value)}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
                   type="button"
-                  onClick={onSso}
-                  disabled={isSsoLoading || !email}
-                  className={`flex w-full items-center justify-center gap-2 rounded-md py-3 px-4 text-sm font-medium transition-colors ${
-                    isDark
-                      ? 'border border-slate-700 bg-slate-800 text-white hover:bg-slate-700'
-                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                  } ${(isSsoLoading || !email) ? 'cursor-not-allowed opacity-70' : ''}`}
-                  variant="hoverborder"
-                  hoverBorderEffectColor="#2E75B6"
-                  hoverBorderEffectThickness="2px"
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400"
+                  aria-label="Toggle password visibility"
                 >
-                  <ShieldCheck size={16} />
-                  {isSsoLoading ? 'Signing in with SSO...' : 'Employee SSO'}
-                </RippleButton>
-
-                {message && (
-                  <p className={`text-sm ${isDark ? 'text-rose-300' : 'text-rose-600'}`}>{message}</p>
-                )}
-              </form>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
+
+            <RippleButton
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 px-4 rounded-lg font-medium hover:from-emerald-600 hover:to-emerald-700"
+              variant="default"
+            >
+              {isLoading ? 'Signing in...' : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Sign in</span>
+                </>
+              )}
+            </RippleButton>
+
+            <RippleButton
+              type="button"
+              onClick={onSso}
+              disabled={isSsoLoading || !email}
+              className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700"
+              variant="hoverborder"
+              hoverBorderEffectColor="#10b981"
+              hoverBorderEffectThickness="2px"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>{isSsoLoading ? 'Signing in with SSO...' : 'Employee SSO'}</span>
+            </RippleButton>
+
+            {message ? <p className="text-sm text-rose-600 dark:text-rose-300">{message}</p> : null}
+          </form>
+
+          <div className="text-center">
+            <p className="text-xs text-gray-500 dark:text-slate-400">Secure role-based access for employee, manager, front desk, and IT admin.</p>
           </div>
         </div>
       </div>
