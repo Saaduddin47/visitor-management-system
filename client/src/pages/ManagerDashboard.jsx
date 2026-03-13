@@ -139,7 +139,7 @@ const ManagerDashboard = () => {
                     <p className="flex items-center gap-2"><FileText className="w-4 h-4" /> Purpose: {request.purpose || request.visitPurpose || request.purposeOfVisit || '-'}</p>
                   </div>
                 </div>
-                <StatusBadge status={request.status} map={statusBadgeStyles} />
+                <StatusBadge status={request.status} map={statusBadgeStyles} circular />
               </div>
 
               <input className="input" placeholder="Comment" value={commentById[request._id] || ''} onChange={(e) => setCommentById((p) => ({ ...p, [request._id]: e.target.value }))} disabled={loadingById[request._id]} />

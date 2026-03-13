@@ -179,7 +179,7 @@ const EmployeeDashboard = () => {
                     <p className="flex items-center gap-2"><User className="w-4 h-4" /> {request.purpose}</p>
                   </div>
                 </div>
-                <StatusBadge status={request.status} map={statusBadgeStyles} />
+                <StatusBadge status={request.status} map={statusBadgeStyles} circular />
               </div>
 
               {!!request.managerComment && request.status === 'needs-changes' ? <div className="rounded-lg border border-orange-200 dark:border-orange-900 bg-orange-100/80 dark:bg-orange-950/40 px-3 py-2 text-sm"><p className="font-semibold flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Manager Comment</p><p>{request.managerComment}</p></div> : null}

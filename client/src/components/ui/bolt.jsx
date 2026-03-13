@@ -61,7 +61,19 @@ export const SectionCard = ({ title, children, actions }) => (
   </section>
 );
 
-export const StatusBadge = ({ status, map }) => {
+export const StatusBadge = ({ status, map, circular = false }) => {
   const cls = map?.[status] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
-  return <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${cls}`}>{status}</span>;
+  const label = String(status || '').replace(/-/g, ' ');
+
+  if (circular) {
+    return (
+      <span
+        className={`w-20 h-20 rounded-full text-[11px] leading-tight font-semibold text-center capitalize flex items-center justify-center px-2 shrink-0 ${cls}`}
+      >
+        {label}
+      </span>
+    );
+  }
+
+  return <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${cls}`}>{label}</span>;
 };
