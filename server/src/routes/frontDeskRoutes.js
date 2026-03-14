@@ -6,8 +6,29 @@ import { VisitorRequest } from '../models/VisitorRequest.js';
 import { AppError } from '../utils/AppError.js';
 import { requiredString } from '../utils/validators.js';
 import { writeAuditLog } from '../services/auditService.js';
+import { sendMail } from '../config/mailer.js';
 
 const router = express.Router();
+
+const sendVisitorStatusMail = async ({ request, statusLabel, frontDeskRemark }) => {
+  if (!request.visitorEmail) return;
+
+  try {
+    await sendMail({
+      to: request.visitorEmail,
+      subject: `Visit ${statusLabel} (${request.referenceId})`,
+      html: `<div style="font-family: Inter, Arial, sans-serif; color: #0f172a;">
+        <h2>Visitor status updated: ${statusLabel}</h2>
+        <p><strong>Reference:</strong> ${request.referenceId}</p>
+        <p><strong>Visitor:</strong> ${request.visitorName}</p>
+        <p><strong>Date:</strong> ${request.dateOfVisit} at ${request.timeOfVisit}</p>
+        ${frontDeskRemark ? `<p><strong>Front desk remark:</strong> ${frontDeskRemark}</p>` : ''}
+      </div>`
+    });
+  } catch (emailErr) {
+    console.error(`[frontdesk/${statusLabel}] Email sending failed:`, emailErr.message);
+  }
+};
 
 router.use(protect, authorize(ROLES.FRONT_DESK));
 
@@ -126,6 +147,12 @@ router.post(
     request.actions.push({ action: REQUEST_STATUS.CHECKED_OUT, user: req.user._id, remark: request.frontDeskRemarks });
     await request.save();
 
+    await sendVisitorStatusMail({
+      request,
+      statusLabel: 'Checked Out',
+      frontDeskRemark: request.frontDeskRemarks
+    });
+
     await writeAuditLog({
       action: AUDIT_ACTIONS.VISITOR_CHECKOUT,
       user: req.user._id,
@@ -149,6 +176,12 @@ router.post(
     request.frontDeskRemarks = req.body.remark ? requiredString(req.body.remark, 'Remark', 500) : '';
     request.actions.push({ action: REQUEST_STATUS.NO_SHOW, user: req.user._id, remark: request.frontDeskRemarks });
     await request.save();
+
+    await sendVisitorStatusMail({
+      request,
+      statusLabel: 'No Show',
+      frontDeskRemark: request.frontDeskRemarks
+    });
 
     await writeAuditLog({
       action: AUDIT_ACTIONS.VISITOR_NO_SHOW,
