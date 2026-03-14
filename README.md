@@ -32,13 +32,14 @@ From the repository root:
    - `docker compose logs -f`
 4. Stop containers:
    - `docker compose down`
-5. Stop and remove MongoDB volume (full reset):
-   - `docker compose down -v`
 
 ### Exposed services
 - Frontend (Vite): `http://localhost:5173`
 - Backend API: `http://localhost:5000`
-- MongoDB: `localhost:27017`
+
+### Database configuration
+- The backend reads `MONGO_URI` from `server/.env`.
+- Use `server/.env.example` as the template and never commit `server/.env`.
 
 ## Roles
 - Employee
