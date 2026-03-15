@@ -39,7 +39,7 @@ From the repository root:
 
 ### Database configuration
 - The backend reads `MONGO_URI` from `server/.env`.
-- Use `server/.env.example` as the template and never commit `server/.env`.
+- Use `server/.env.example` as the template and never commit `server/.env`
 
 ## Roles
 - Employee
